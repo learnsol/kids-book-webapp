@@ -1,0 +1,83 @@
+{
+  "azure_ai": {
+    "endpoint": "${AZURE_ENDPOINT}",
+    "api_key": "${AZURE_API_KEY}",
+    "content_filter": {
+      "enabled": true,
+      "filter_level": "moderate"
+    },
+    "responsible_ai_principles": {
+      "fairness": true,
+      "transparency": true,
+      "accountability": true,
+      "privacy": true
+    }
+  },
+  "editor_agent": {
+    "model": "gpt-4o-mini",
+    "deployment_name": "gpt-4o-mini",
+    "api_version": "2025-01-01-preview",
+    "max_tokens": 2000,
+    "temperature": 0.7,
+    "prompt": {
+      "system": "You are a professional children's book editor specializing in age-appropriate content, storytelling, and educational value. Your task is to review, enhance, and ensure stories meet safety guidelines while maintaining engagement and educational value.",
+      "instructions": [
+        "Review and enhance children's stories following these guidelines:",
+        "1. Age Appropriateness: Ensure content is suitable for ages 4-10",
+        "2. Language Clarity: Use simple words and short sentences",
+        "3. Educational Value: Include subtle learning opportunities",
+        "4. Engagement: Maintain a playful and engaging tone",
+        "5. Structure: Keep paragraphs short and well-organized",
+        "6. Safety: Remove any potentially frightening or inappropriate content",
+        "7. Diversity: Ensure inclusive representation and avoid stereotypes",
+        "8. Emotional Intelligence: Include positive social-emotional messages",
+        "9. Reading Level: Maintain grade-appropriate vocabulary",
+        "10. Story Arc: Ensure a clear beginning, middle, and end"
+      ],
+      "output_format": {
+        "title": "string",
+        "target_age": "number",
+        "edited_content": "string",
+        "reading_time": "number",
+        "educational_themes": "array"
+      }
+    },
+    "model_config": {
+      "presence_penalty": 0.1,
+      "frequency_penalty": 0.1,
+      "top_p": 0.9
+    }
+  },
+  "illustrator_agent": {
+    "model": "dall-e-3",
+    "deployment_name": "dall-e-3",
+    "api_version": "2024-02-01",
+    "image_size": "1024x1024",
+    "quality": "standard",
+    "style": "natural",
+    "prompt_config": {
+      "system": "Create child-friendly, colorful illustrations that match the story's theme and characters. Images should be engaging, age-appropriate, and support the narrative.",
+      "style_guide": {
+        "art_style": "cartoon",
+        "color_palette": "vibrant and cheerful",
+        "character_design": "friendly and appealing",
+        "safety_filters": ["no_scary_elements", "child_appropriate", "positive_imagery"]
+      },
+      "instructions": [
+        "1. Create images suitable for ages 4-10",
+        "2. Use bright, cheerful colors",
+        "3. Avoid scary or threatening elements",
+        "4. Include diverse representation",
+        "5. Match illustration style to story tone",
+        "6. Ensure consistent character appearance",
+        "7. Create engaging but simple backgrounds",
+        "8. Include relevant story elements"
+      ]
+    },
+    "generation_params": {
+      "n": 1,
+      "response_format": "url",
+      "safe_filter": true
+    }
+  }
+}

@@ -1,0 +1,12 @@
+azure-ai-textanalytics
+azure-cognitiveservices-vision-computervision
+azure-storage-blob
+Pillow
+python-dotenv
+pytest
+pytest-asyncio
+openai==0.28
+fastapi
+jinja2
+Uvicorn
+python-multipart
