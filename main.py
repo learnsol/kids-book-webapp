@@ -35,50 +35,46 @@ async def read_index(request: Request):
 # Endpoint to process the creation of the kids book
 @app.post("/create_kids_book/")
 async def create_kids_book(request: Request, story: str = Form(...)):
-    """
-    Async endpoint that:
-      - Retrieves the story from the submitted form,
-      - Initializes the EditorAgent, IllustratorAgent, and StoryProcessor,
-      - Processes the story asynchronously (with a 5-minute timeout),
-      - Returns a JSON response containing the composite story, final edited story, and illustration.
-    """
+    """Async endpoint to create a kids book."""
     if not story:
-        logger.warning("No story provided in the request")
+        logger.warning("No story provided in request")
         raise HTTPException(status_code=400, detail="No story provided")
 
-    logger.info("Initializing agents")
     # Initialize agents
     editor = EditorAgent()
     illustrator = IllustratorAgent()
     story_processor = StoryProcessor()
 
     try:
-        # Set an overall timeout for processing (5 minutes)
-        async with asyncio.timeout(300):
-            logger.info("Calling editor.edit_story()")
+        async with asyncio.timeout(300):  # 5 minute timeout
+            # Process with editor
             editor_result = await editor.edit_story(story)
             if not editor_result:
-                logger.error("Editor returned no result")
                 raise HTTPException(status_code=500, detail="Story editing failed")
 
             final_story = editor_result.get("final_story")
             illustrator_prompt = editor_result.get("illustrator_prompt")
-            logger.debug(f"Final story obtained, length: {len(final_story)}")
-            logger.debug(f"Illustrator prompt: {illustrator_prompt}")
 
-            logger.info("Calling illustrator.generate_illustration()")
-            illustrations = await illustrator.generate_illustration(illustrator_prompt)
-            if not illustrations:
-                logger.error("Illustrator returned no illustrations")
-                raise HTTPException(status_code=500, detail="Illustration generation failed")
+            # Generate cover image
+            cover_image_url = await illustrator.generate_cover_image(final_story)
+            if not cover_image_url:
+                raise HTTPException(status_code=500, detail="Cover image generation failed")
 
-            logger.info("Calling story_processor.process() in thread pool")
-            composite_story = await asyncio.to_thread(
+            # Create composite HTML
+            html_content = await asyncio.to_thread(
                 story_processor.process,
                 final_story=final_story,
-                illustrations=illustrations,
+                cover_image_url=cover_image_url,
                 illustrator_prompt=illustrator_prompt
             )
+
+            # Return both HTML and JSON data
+            return JSONResponse(content={
+                "status": "success",
+                "html_content": html_content,
+                "cover_image_url": cover_image_url,
+                "final_story": final_story
+            })
 
     except asyncio.TimeoutError:
         logger.error("Operation timed out")
@@ -86,11 +82,3 @@ async def create_kids_book(request: Request, story: str = Form(...)):
     except Exception as e:
         logger.exception(f"Error processing request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-    logger.info("All async operations complete. Returning JSON response")
-    return JSONResponse(content={
-        "status": "success",
-        "composite_story": composite_story,
-        "final_story": final_story,
-        "illustrations": illustrations
-    })

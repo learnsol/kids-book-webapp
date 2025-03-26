@@ -1,5 +1,5 @@
 import logging
-import openai  # Using the openai package (v1.x)
+from openai import OpenAI  # Changed from AsyncAzureOpenAI
 from .base_agent import BaseAgent
 import re
 import asyncio
@@ -12,57 +12,50 @@ class EditorAgent(BaseAgent):
         Initialize the EditorAgent using Azure OpenAI (GPT-4o) and configure the OpenAI SDK.
         """
         super().__init__(config_path, 'editor_agent')
-        # Enforce usage of GPT-4o for text completions.
-        self.config['model'] = 'gpt-4o-mini'
-        self._configure_openai()
+        self.client = self._configure_openai()
 
     def _configure_openai(self):
-        """
-        Configure OpenAI SDK credentials for Azure OpenAI.
-        """
+        """Configure Azure OpenAI client."""
         try:
-            openai.api_key = self.config['azure_ai']['api_key']
-            openai.api_base = self.config['azure_ai']['endpoint']
-            openai.api_type = "azure"
-            openai.api_version = "2025-01-01-preview"
-            logger.info("OpenAI SDK configured successfully.")
-        except KeyError as e:
-            logger.error(f"Missing Azure AI configuration: {str(e)}")
-            raise
+            # Format the base_url correctly for Azure OpenAI
+            azure_endpoint = self.config['azure_ai']['endpoint'].rstrip('/')
+            deployment_name = self.config['deployment_name']
+            base_url = f"{azure_endpoint}/openai/deployments/{deployment_name}"
+            
+            client = OpenAI(
+                api_key=self.config['azure_ai']['api_key'],
+                base_url=base_url,
+                default_query={'api-version': '2025-01-01-preview'}  # API version as default query parameter
+            )
+            logger.info("Azure OpenAI client configured successfully.")
+            return client
         except Exception as e:
-            logger.exception(f"Error configuring OpenAI SDK: {str(e)}")
+            logger.exception(f"Error configuring Azure OpenAI client: {str(e)}")
             raise
 
     async def edit_story(self, story: str):
         """
-        Asynchronously sends a story for editing and returns a dictionary with the final story
-        and a string of concatenated interesting points.
+        Edit and enhance the story using Azure OpenAI.
         """
         try:
-            # Build messages (system prompt and user story)
-            messages = [
-                {"role": "system", "content": self.config['prompt']['system']},
-                {"role": "user", "content": story}
-            ]
-            response = await openai.ChatCompletion.acreate(
-                engine=self.config['model'],
-                messages=messages,
-                max_tokens=self.config['max_tokens'],
-                temperature=self.config['temperature']
+            # Create completion synchronously since OpenAI v1.x client is not async
+            response = self.client.chat.completions.create(
+                model=self.config['deployment_name'],
+                messages=[
+                    {"role": "system", "content": self.config['prompt']['system']},
+                    {"role": "user", "content": story}
+                ],
+                temperature=self.config['temperature'],
+                max_tokens=self.config['max_tokens']
             )
-            final_story = response.choices[0].message.content
-            # Extract interesting points as a single concatenated prompt string.
-            interesting_points = self._extract_interesting_points(final_story)
-            logger.info("Story edited successfully.")
+            
+            edited_story = response.choices[0].message.content
             return {
-                "final_story": final_story,
-                "illustrator_prompt": interesting_points
+                "final_story": edited_story,
+                "illustrator_prompt": "Create illustrations for: " + edited_story[:200]
             }
-        except openai.error.OpenAIError as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            raise
         except Exception as e:
-            logger.exception(f"An unexpected error occurred during story editing: {str(e)}")
+            logger.exception(f"Error editing story: {str(e)}")
             raise
 
     def _extract_interesting_points(self, story: str):
@@ -90,9 +83,10 @@ class EditorAgent(BaseAgent):
                 filtered_sentences.append(sentence)
         return ' '.join(filtered_sentences)
 
-    def process_story(self, story: str):
+    async def process_story(self, story: str):
         """
         Filters and then starts asynchronous editing of the story.
         """
         filtered_story = self.filter_content(story)
-        return self.edit_story(filtered_story)
+        # Run the synchronous OpenAI call in a thread pool
+        return await asyncio.to_thread(self.edit_story, filtered_story)

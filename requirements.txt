@@ -5,8 +5,9 @@ Pillow
 python-dotenv
 pytest
 pytest-asyncio
-openai==0.28
+openai>=1.0.0
 fastapi
 jinja2
 Uvicorn
 python-multipart
+openai[datalib]  # Add this line
