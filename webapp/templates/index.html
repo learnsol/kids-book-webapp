@@ -3,37 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kids Book Creator</title>
+    <title>EPIK - Kids Book Creator</title>
     <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Fredoka+One&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>Welcome to the Kids Book Creator</h1>
-        <p>Create a magical book for kids with our AI-powered editor and illustrator!</p>
-    </header>
-    <main>
-        <form id="storyForm" action="/create_kids_book/" method="post">
-            <label for="story_input">Enter your short story:</label>
-            <textarea id="story_input" name="story" rows="10" required></textarea>
-            <button type="submit">Create Book</button>
-        </form>
+    <div class="container">
+        <header>
+            <h1>Welcome to EPIK - Kids Book Creator</h1>
+            <p>Create a custom magical book for your kids with our AI-powered editor and illustrator!</p>
+        </header>
+        <main>
+            <form id="storyForm" action="/create_kids_book/" method="post">
+                <div class="form-group">
+                    <label for="story_input">Enter Story Below:</label>
+                    <textarea id="story_input" name="story" rows="15" required></textarea>
+                    <button type="submit">Create Your Magical Book</button>
+                </div>
+            </form>
 
-        <div id="processingMessage" style="display:none;">
-            <p>Generating your story...</p>
-            <div class="progress-bar"></div>
-        </div>
-
-        <div id="results" style="display:none;">
-            <h2>Your Story Book</h2>
-            <div id="compositeStory"></div>
-            <div class="controls">
-                <button id="downloadPDF" style="display:none;">Download as PDF</button>
+            <div id="processingMessage" style="display:none;">
+                <p>Generating your story...</p>
+                <div class="progress-bar"></div>
             </div>
-        </div>
-    </main>
-    <footer>
-        <p>&copy; 2023 Kids Book Creator. All rights reserved.</p>
-    </footer>
+
+            <div id="results" style="display:none;">
+                <h2>Your Story Book</h2>
+                <div id="compositeStory"></div>
+                <div class="controls">
+                    <button id="downloadPDF" style="display:none;">Download as HTML</button>
+                </div>
+            </div>
+        </main>
+        <footer>
+            <p>&copy; 2025 EPIK - Kids Book Creator. All rights reserved.</p>
+        </footer>
+    </div>
     <script src="/static/js/scripts.js" defer></script>
 </body>
 </html>
