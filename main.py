@@ -1,10 +1,13 @@
 import os
 import asyncio
-from fastapi import FastAPI, Request, HTTPException, Form
+from fastapi import FastAPI, Request, HTTPException, Form, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from models.database import Database, Story
+from sqlalchemy.orm import Session
 import logging
 
 from agents.editor_agent import EditorAgent
@@ -16,6 +19,20 @@ load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(title="Kids Book Web App")
+db = Database()
+
+# Create tables on startup
+@app.on_event("startup")
+async def startup():
+    db.create_tables()
+
+# Dependency to get DB session
+def get_db():
+    session = db.get_session()
+    try:
+        yield session
+    finally:
+        session.close()
 
 # Set up logging
 logger = logging.getLogger("kidsbook")
@@ -34,19 +51,23 @@ async def read_index(request: Request):
 
 # Endpoint to process the creation of the kids book
 @app.post("/create_kids_book/")
-async def create_kids_book(request: Request, story: str = Form(...)):
-    """Async endpoint to create a kids book."""
+async def create_kids_book(
+    request: Request, 
+    story: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Async endpoint to create a kids book and store results in Azure SQL."""
     if not story:
         logger.warning("No story provided in request")
         raise HTTPException(status_code=400, detail="No story provided")
 
-    # Initialize agents
-    editor = EditorAgent()
-    illustrator = IllustratorAgent()
-    story_processor = StoryProcessor()
-
     try:
-        async with asyncio.timeout(300):  # 5 minute timeout
+        # Initialize agents
+        editor = EditorAgent()
+        illustrator = IllustratorAgent()
+        story_processor = StoryProcessor()
+
+        async with asyncio.timeout(300):
             # Process with editor
             editor_result = await editor.edit_story(story)
             if not editor_result:
@@ -60,6 +81,19 @@ async def create_kids_book(request: Request, story: str = Form(...)):
             if not cover_image_url:
                 raise HTTPException(status_code=500, detail="Cover image generation failed")
 
+            # Store in database
+            db_story = Story(
+                input_text=story,
+                edited_text=final_story,
+                cover_image_url=cover_image_url,
+                editor_prompt=editor.config['prompt']['system'],
+                illustrator_prompt=illustrator_prompt,
+                editor_response=editor_result,
+                illustrator_response={"cover_image_url": cover_image_url}
+            )
+            db.add(db_story)
+            db.commit()
+
             # Create composite HTML
             html_content = await asyncio.to_thread(
                 story_processor.process,
@@ -68,12 +102,12 @@ async def create_kids_book(request: Request, story: str = Form(...)):
                 illustrator_prompt=illustrator_prompt
             )
 
-            # Return both HTML and JSON data
             return JSONResponse(content={
                 "status": "success",
                 "html_content": html_content,
                 "cover_image_url": cover_image_url,
-                "final_story": final_story
+                "final_story": final_story,
+                "story_id": db_story.id
             })
 
     except asyncio.TimeoutError:

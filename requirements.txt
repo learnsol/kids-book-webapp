@@ -11,3 +11,10 @@ jinja2
 Uvicorn
 python-multipart
 openai[datalib]  # Add this line
+
+# Add these new dependencies
+azure-functions
+pyodbc
+sqlalchemy
+azure-identity
+python-jose[cryptography]

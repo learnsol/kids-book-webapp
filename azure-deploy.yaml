@@ -1,0 +1,53 @@
+parameters:
+  - name: environmentName
+    type: string
+  - name: location
+    type: string
+    default: westeurope
+
+variables:
+  applicationName: kidsbook
+  sqlServerName: $(applicationName)-sql
+  databaseName: $(applicationName)-db
+  appServicePlanName: $(applicationName)-plan
+  appServiceName: $(applicationName)-app
+  keyVaultName: $(applicationName)-kv
+
+resources:
+  - type: Microsoft.Sql/servers
+    name: $(sqlServerName)
+    location: $(location)
+    properties:
+      administratorLogin: $(sqlAdminUsername)
+      administratorLoginPassword: $(sqlAdminPassword)
+    resources:
+      - type: databases
+        name: $(databaseName)
+        location: $(location)
+        sku:
+          name: Basic
+          tier: Basic
+
+  - type: Microsoft.Web/serverfarms
+    name: $(appServicePlanName)
+    location: $(location)
+    sku:
+      name: P1v2
+      tier: PremiumV2
+
+  - type: Microsoft.Web/sites
+    name: $(appServiceName)
+    location: $(location)
+    properties:
+      serverFarmId: $(appServicePlanName)
+      siteConfig:
+        pythonVersion: '3.9'
+        appSettings:
+          - name: AZURE_SQL_CONNECTION_STRING
+            value: $(sqlConnectionString)
+          - name: AZURE_API_KEY
+            value: $(azureApiKey)
+          - name: AZURE_ENDPOINT
+            value: $(azureEndpoint)
+          - name: WEBSITE_RUN_FROM_PACKAGE
+            value: '1'
