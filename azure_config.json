@@ -32,7 +32,9 @@
         "7. Diversity: Ensure inclusive representation and avoid stereotypes",
         "8. Emotional Intelligence: Include positive social-emotional messages",
         "9. Reading Level: Maintain grade-appropriate vocabulary",
-        "10. Story Arc: Ensure a clear beginning, middle, and end"
+        "10. Story Arc: Ensure a clear beginning, middle, and end",
+        "11. Tone: Match the story's tone to the intended age group",
+        "12. Return only the final edited story with the Title and target_age, Display any education themes and safety guidelines at the bottom after the story."
       ],
       "output_format": {
         "title": "string",
