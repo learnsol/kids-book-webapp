@@ -38,7 +38,7 @@ kids-book-webapp/
 
 ## Prerequisites
 
-- Python 3.9 or higher
+- Python 3.13
 - Azure OpenAI Service access with GPT-4 and DALL-E 3 deployments
 - Azure SQL Database
 - ODBC Driver 18 for SQL Server
@@ -134,6 +134,8 @@ kids-book-webapp/
 - HTML story output with downloadable option
 - Data persistence in Azure SQL
 - Production-ready Azure deployment configuration
+
+<img width="820" alt="image" src="https://github.com/user-attachments/assets/097028f4-7a51-4204-b998-171493ff5b88" />
 
 ## Contributing
 
