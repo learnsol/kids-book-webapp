@@ -27,6 +27,7 @@ class Database:
     def __init__(self):
         try:
             conn_str = os.getenv('AZURE_SQL_CONNECTION_STRING')
+            #print(f"Connection string: {conn_str}")
             if not conn_str:
                 raise ValueError("Azure SQL connection string not found in environment variables")
             

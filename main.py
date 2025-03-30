@@ -15,7 +15,7 @@ from agents.illustrator_agent import IllustratorAgent
 from agents.story_processor import StoryProcessor
 
 # Load environment variables from .env
-load_dotenv()
+load_dotenv(override=True)
 
 # Initialize FastAPI app
 app = FastAPI(title="Kids Book Web App")
