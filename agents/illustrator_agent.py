@@ -53,12 +53,22 @@ class IllustratorAgent(BaseAgent):
                 logger.info("Cover image generated successfully.")
                 return response.data[0].url
             except Exception as e:
-                if attempt == max_attempts - 1:
+                should_retry = attempt < max_attempts - 1 and self._is_retryable_error(e)
+                if not should_retry:
                     logger.exception(f"Cover image generation failed: {str(e)}")
                     raise
                 backoff = 2 ** attempt
                 logger.warning(f"Retrying image generation in {backoff}s after error: {str(e)}")
                 await asyncio.sleep(backoff)
+
+    def _is_retryable_error(self, error: Exception) -> bool:
+        status_code = getattr(error, "status_code", None)
+        if status_code in {408, 409, 429}:
+            return True
+        if isinstance(status_code, int) and status_code >= 500:
+            return True
+        error_name = error.__class__.__name__.lower()
+        return any(token in error_name for token in ("timeout", "connection", "ratelimit", "temporar"))
 
     def _create_cover_prompt(self, final_story: str):
         """Create a prompt for the cover image."""
