@@ -36,7 +36,7 @@ def get_db():
 
 # Set up logging
 logger = logging.getLogger("kidsbook")
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 
 # Mount static files (assuming your static assets are in webapp/static)
 app.mount("/static", StaticFiles(directory="webapp/static"), name="static")
@@ -115,4 +115,4 @@ async def create_kids_book(
         raise HTTPException(status_code=504, detail="Operation timed out")
     except Exception as e:
         logger.exception(f"Error processing request: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
