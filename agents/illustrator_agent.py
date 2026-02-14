@@ -38,7 +38,8 @@ class IllustratorAgent(BaseAgent):
             str: URL of the generated cover image.
         """
         prompt = self._create_cover_prompt(final_story)
-        max_attempts = int(self.config.get("max_retries", 3))
+        max_retries = int(self.config.get("max_retries", 2))
+        max_attempts = max_retries + 1
         for attempt in range(max_attempts):
             try:
                 response = await self.client.images.generate(

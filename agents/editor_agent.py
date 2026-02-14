@@ -36,9 +36,13 @@ class EditorAgent(BaseAgent):
 
     def edit_story(self, story: str):
         """
-        Edit and enhance the story using Azure OpenAI.
+        Synchronous story editing call for Azure OpenAI.
+        Callers in async paths should use `process_story`.
+        Retries transient failures with exponential backoff and returns:
+        {"final_story": str, "illustrator_prompt": str}
         """
-        max_attempts = int(self.config.get("max_retries", 3))
+        max_retries = int(self.config.get("max_retries", 2))
+        max_attempts = max_retries + 1
         for attempt in range(max_attempts):
             try:
                 response = self.client.chat.completions.create(

@@ -19,6 +19,7 @@ load_dotenv()
 # Initialize FastAPI app
 app = FastAPI(title="Kids Book Web App")
 db = Database()
+# Bound story size to keep request cost and processing time under control.
 MAX_STORY_LENGTH = 5000
 _editor_agent = None
 _illustrator_agent = None
@@ -85,7 +86,7 @@ async def create_kids_book(
 
         async with asyncio.timeout(300):
             # Process with editor
-            editor_result = await asyncio.to_thread(editor.edit_story, story)
+            editor_result = await editor.process_story(story)
             if not editor_result:
                 raise HTTPException(status_code=500, detail="Story editing failed")
 
