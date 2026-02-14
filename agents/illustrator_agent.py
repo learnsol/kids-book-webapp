@@ -9,6 +9,8 @@ from .base_agent import BaseAgent
 logger = logging.getLogger('kidsbook')
 
 class IllustratorAgent(BaseAgent):
+    RETRYABLE_ERROR_TOKENS = ("timeout", "connection", "ratelimit", "temporary")
+
     def __init__(self, config_path='azure_config.json'):
         """Initialize the IllustratorAgent with configuration for DALL-E 3."""
         super().__init__(config_path, 'illustrator_agent')
@@ -68,7 +70,7 @@ class IllustratorAgent(BaseAgent):
         if isinstance(status_code, int) and status_code >= 500:
             return True
         error_name = error.__class__.__name__.lower()
-        return any(token in error_name for token in ("timeout", "connection", "ratelimit", "temporar"))
+        return any(token in error_name for token in self.RETRYABLE_ERROR_TOKENS)
 
     def _create_cover_prompt(self, final_story: str):
         """Create a prompt for the cover image."""

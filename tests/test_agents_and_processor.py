@@ -44,16 +44,17 @@ class _FakeCompletionClient:
 
 
 class _FakeImageClient:
-    def __init__(self, fail_with=None):
+    def __init__(self, fail_with=None, success_call_number=2):
         self.calls = 0
         self.fail_with = fail_with
+        self.success_call_number = success_call_number
         self.images = self
 
     async def generate(self, **kwargs):
         self.calls += 1
         if self.fail_with is not None:
             raise self.fail_with
-        if self.calls < 2:
+        if self.calls < self.success_call_number:
             raise TimeoutError("temporary timeout")
         return types.SimpleNamespace(data=[types.SimpleNamespace(url="https://img.example/ok.png")])
 
