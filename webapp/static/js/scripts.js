@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Display the story in an iframe
                 const iframe = document.createElement('iframe');
                 iframe.src = url;
+                iframe.setAttribute('sandbox', '');
                 iframe.style.width = '100%';
                 iframe.style.height = '600px';
                 iframe.style.border = '1px solid #ccc';

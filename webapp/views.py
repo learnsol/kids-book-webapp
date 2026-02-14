@@ -83,7 +83,7 @@ async def create_kids_book(request):
     except Exception as e:
         logger.exception(f"Error processing request: {str(e)}")
         return JsonResponse({
-            'error': str(e),
+            'error': 'Internal server error',
             'status': 'error',
             'processing_complete': False
         }, status=500)
