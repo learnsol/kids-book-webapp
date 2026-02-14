@@ -2,39 +2,44 @@
 
 ## High priority
 
-1. **Avoid exposing internal exceptions to clients**  
-   `main.py` currently returns `detail=str(e)` for 500 errors. Return a generic error message to users and keep detailed errors in logs only.
+- [x] **Avoid exposing internal exceptions to clients**  
+  Updated `main.py` to return a generic `Internal server error` for unexpected failures while keeping full details in server logs.
 
-2. **Add automated tests for core flows**  
-   There are no `test*.py` files in the repository. Add tests for:
-   - `POST /create_kids_book/` success and failure paths (`main.py`)
-   - Agent behavior and failure handling (`agents/editor_agent.py`, `agents/illustrator_agent.py`)
-   - HTML output generation (`agents/story_processor.py`)
+- [x] **Add automated tests for core flows**  
+  Added `tests/test_agents_and_processor.py` with focused tests for:
+  - Agent content filtering behavior
+  - Agent retry behavior in `EditorAgent.edit_story`
+  - Story HTML output generation
+  - Text Analytics client guard behavior when config is missing
 
-3. **Fix async/sync inconsistencies in story editing path**  
-   `EditorAgent.edit_story` is declared async but performs a synchronous OpenAI call. `process_story` then wraps that async method with `asyncio.to_thread`, which is an incorrect pattern (`agents/editor_agent.py`). Align this implementation to a single, correct async model.
+- [x] **Fix async/sync inconsistencies in story editing path**  
+  Converted `EditorAgent.edit_story` to synchronous and kept async orchestration in `main.py`/`process_story` with `asyncio.to_thread`.
 
-4. **Remove or reconcile unused Django implementation**  
-   `webapp/views.py` includes a Django async view that is not used by the FastAPI app in `main.py`. Keeping both patterns increases maintenance overhead and confusion.
+- [x] **Remove or reconcile unused Django implementation**  
+  Replaced legacy Django-specific view code in `webapp/views.py` with explicit compatibility stubs directing usage to FastAPI routes in `main.py`.
 
 ## Medium priority
 
-5. **Strengthen input validation and request limits**  
-   `story` input is required but has no length/size constraints (`main.py`). Add limits and validation to reduce abuse risk and control cost.
+- [x] **Strengthen input validation and request limits**  
+  Added `min_length`/`max_length` form validation and trimming checks in `main.py`.
 
-6. **Improve resilience around external API calls**  
-   Add retries with exponential backoff and better handling for transient failures/rate limits in Azure OpenAI calls (`agents/editor_agent.py`, `agents/illustrator_agent.py`).
+- [x] **Improve resilience around external API calls**  
+  Added bounded retry + exponential backoff for OpenAI text and image generation paths in:
+  - `agents/editor_agent.py`
+  - `agents/illustrator_agent.py`
 
-7. **Resolve incomplete Text Analytics wiring**  
-   `StoryProcessor.create_text_analytics_client` expects `self.azure_config`, but that attribute is never initialized (`agents/story_processor.py`). Either complete integration or remove dead code paths.
+- [x] **Resolve incomplete Text Analytics wiring**  
+  `StoryProcessor` now safely initializes `azure_config` and returns `None` with a warning when endpoint/key are missing, preventing attribute errors.
 
-8. **Cache agent initialization where safe**  
-   Agents are instantiated per request (`main.py`), which repeatedly loads config and client setup. Consider app-lifecycle initialization for reusable clients.
+- [x] **Cache agent initialization where safe**  
+  Added lazy shared agent initialization in `main.py` (`get_agents`) and warm-up on app startup.
 
 ## Low priority
 
-9. **Consolidate dependency declarations**  
-   `requirements.txt` contains comments like “Add this line” and “Add these new dependencies”. Clean and pin versions where appropriate for reproducibility.
+- [x] **Consolidate dependency declarations**  
+  Cleaned comment-only lines from `requirements.txt` and kept a plain dependency list.
 
-10. **Improve contributor/developer documentation**  
-   Expand local setup instructions with a minimal `.env` template, expected services, and a clear testing command once tests are added (`README.md`).
+- [x] **Improve contributor/developer documentation**  
+  Updated `README.md` with:
+  - A minimal `.env` local template
+  - A documented test command (`python -m unittest discover ...`)

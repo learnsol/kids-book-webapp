@@ -1,4 +1,3 @@
-import os
 import asyncio
 from fastapi import FastAPI, Request, HTTPException, Form, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
@@ -20,11 +19,16 @@ load_dotenv()
 # Initialize FastAPI app
 app = FastAPI(title="Kids Book Web App")
 db = Database()
+MAX_STORY_LENGTH = 5000
+_editor_agent = None
+_illustrator_agent = None
+_story_processor = None
 
 # Create tables on startup
 @app.on_event("startup")
 async def startup():
     db.create_tables()
+    get_agents()
 
 # Dependency to get DB session
 def get_db():
@@ -33,6 +37,16 @@ def get_db():
         yield session
     finally:
         session.close()
+
+def get_agents():
+    global _editor_agent, _illustrator_agent, _story_processor
+    if _editor_agent is None:
+        _editor_agent = EditorAgent()
+    if _illustrator_agent is None:
+        _illustrator_agent = IllustratorAgent()
+    if _story_processor is None:
+        _story_processor = StoryProcessor()
+    return _editor_agent, _illustrator_agent, _story_processor
 
 # Set up logging
 logger = logging.getLogger("kidsbook")
@@ -53,23 +67,21 @@ async def read_index(request: Request):
 @app.post("/create_kids_book/")
 async def create_kids_book(
     request: Request, 
-    story: str = Form(...),
+    story: str = Form(..., min_length=1, max_length=MAX_STORY_LENGTH),
     db: Session = Depends(get_db)
 ):
     """Async endpoint to create a kids book and store results in Azure SQL."""
+    story = story.strip()
     if not story:
         logger.warning("No story provided in request")
         raise HTTPException(status_code=400, detail="No story provided")
 
     try:
-        # Initialize agents
-        editor = EditorAgent()
-        illustrator = IllustratorAgent()
-        story_processor = StoryProcessor()
+        editor, illustrator, story_processor = get_agents()
 
         async with asyncio.timeout(300):
             # Process with editor
-            editor_result = await editor.edit_story(story)
+            editor_result = await asyncio.to_thread(editor.edit_story, story)
             if not editor_result:
                 raise HTTPException(status_code=500, detail="Story editing failed")
 
@@ -115,4 +127,4 @@ async def create_kids_book(
         raise HTTPException(status_code=504, detail="Operation timed out")
     except Exception as e:
         logger.exception(f"Error processing request: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

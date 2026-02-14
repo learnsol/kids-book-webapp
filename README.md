@@ -75,6 +75,13 @@ kids-book-webapp/
     AZURE_SQL_CONNECTION_STRING=mssql+pyodbc://username:password@server.database.windows.net:1433/database?driver=ODBC+Driver+18+for+SQL+Server
     ```
 
+    Minimal local template:
+    ```env
+    AZURE_API_KEY=replace_me
+    AZURE_ENDPOINT=https://replace-me.openai.azure.com/
+    AZURE_SQL_CONNECTION_STRING=sqlite:///./db.sqlite3
+    ```
+
 ## Local Development
 
 1. **Run database migrations:**
@@ -90,6 +97,12 @@ kids-book-webapp/
 3. **Access the application:**
 
     Open [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+4. **Run tests:**
+
+    ```bash
+    python -m unittest discover -s tests -p "test_*.py"
+    ```
 
 ## Azure Deployment
 

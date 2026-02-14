@@ -3,6 +3,7 @@ from openai import OpenAI  # Changed from AsyncAzureOpenAI
 from .base_agent import BaseAgent
 import re
 import asyncio
+import time
 
 logger = logging.getLogger('kidsbook')
 
@@ -33,30 +34,35 @@ class EditorAgent(BaseAgent):
             logger.exception(f"Error configuring Azure OpenAI client: {str(e)}")
             raise
 
-    async def edit_story(self, story: str):
+    def edit_story(self, story: str):
         """
         Edit and enhance the story using Azure OpenAI.
         """
-        try:
-            # Create completion synchronously since OpenAI v1.x client is not async
-            response = self.client.chat.completions.create(
-                model=self.config['deployment_name'],
-                messages=[
-                    {"role": "system", "content": self.config['prompt']['system']},
-                    {"role": "user", "content": story}
-                ],
-                temperature=self.config['temperature'],
-                max_tokens=self.config['max_tokens']
-            )
-            
-            edited_story = response.choices[0].message.content
-            return {
-                "final_story": edited_story,
-                "illustrator_prompt": "Create illustrations for: " + edited_story[:200]
-            }
-        except Exception as e:
-            logger.exception(f"Error editing story: {str(e)}")
-            raise
+        max_attempts = int(self.config.get("max_retries", 3))
+        for attempt in range(max_attempts):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.config['deployment_name'],
+                    messages=[
+                        {"role": "system", "content": self.config['prompt']['system']},
+                        {"role": "user", "content": story}
+                    ],
+                    temperature=self.config['temperature'],
+                    max_tokens=self.config['max_tokens']
+                )
+
+                edited_story = response.choices[0].message.content
+                return {
+                    "final_story": edited_story,
+                    "illustrator_prompt": "Create illustrations for: " + edited_story[:200]
+                }
+            except Exception as e:
+                if attempt == max_attempts - 1:
+                    logger.exception(f"Error editing story: {str(e)}")
+                    raise
+                backoff = 2 ** attempt
+                logger.warning(f"Retrying story edit in {backoff}s after error: {str(e)}")
+                time.sleep(backoff)
 
     def _extract_interesting_points(self, story: str):
         """
@@ -88,5 +94,4 @@ class EditorAgent(BaseAgent):
         Filters and then starts asynchronous editing of the story.
         """
         filtered_story = self.filter_content(story)
-        # Run the synchronous OpenAI call in a thread pool
         return await asyncio.to_thread(self.edit_story, filtered_story)

@@ -37,23 +37,27 @@ class IllustratorAgent(BaseAgent):
         Returns:
             str: URL of the generated cover image.
         """
-        try:
-            prompt = self._create_cover_prompt(final_story)
-            
-            response = await self.client.images.generate(
-                model=self.config['deployment_name'],
-                prompt=prompt,
-                n=self.config['generation_params']['n'],
-                size=self.config['image_size'],
-                quality="standard"
-            )
-            
-            logger.info("Cover image generated successfully.")
-            return response.data[0].url
-            
-        except Exception as e:
-            logger.exception(f"Cover image generation failed: {str(e)}")
-            raise
+        prompt = self._create_cover_prompt(final_story)
+        max_attempts = int(self.config.get("max_retries", 3))
+        for attempt in range(max_attempts):
+            try:
+                response = await self.client.images.generate(
+                    model=self.config['deployment_name'],
+                    prompt=prompt,
+                    n=self.config['generation_params']['n'],
+                    size=self.config['image_size'],
+                    quality="standard"
+                )
+
+                logger.info("Cover image generated successfully.")
+                return response.data[0].url
+            except Exception as e:
+                if attempt == max_attempts - 1:
+                    logger.exception(f"Cover image generation failed: {str(e)}")
+                    raise
+                backoff = 2 ** attempt
+                logger.warning(f"Retrying image generation in {backoff}s after error: {str(e)}")
+                await asyncio.sleep(backoff)
 
     def _create_cover_prompt(self, final_story: str):
         """Create a prompt for the cover image."""
