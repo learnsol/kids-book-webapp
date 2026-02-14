@@ -28,7 +28,11 @@ _story_processor = None
 @app.on_event("startup")
 async def startup():
     db.create_tables()
-    get_agents()
+    try:
+        get_agents()
+    except Exception as e:
+        logger.exception(f"Agent initialization failed during startup: {str(e)}")
+        raise
 
 # Dependency to get DB session
 def get_db():
