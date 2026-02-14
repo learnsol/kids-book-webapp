@@ -36,7 +36,10 @@ def get_db():
 
 # Set up logging
 logger = logging.getLogger("kidsbook")
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
+log_level = str(os.getenv("LOG_LEVEL", "INFO")).upper()
+if log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+    log_level = "INFO"
+logging.basicConfig(level=getattr(logging, log_level))
 
 # Mount static files (assuming your static assets are in webapp/static)
 app.mount("/static", StaticFiles(directory="webapp/static"), name="static")
