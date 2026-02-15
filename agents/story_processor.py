@@ -1,7 +1,4 @@
-from azure.ai.textanalytics import TextAnalyticsClient
-from azure.core.credentials import AzureKeyCredential
 import json
-import re
 import logging
 from datetime import datetime
 
@@ -10,15 +7,23 @@ logger = logging.getLogger('kidsbook')
 class StoryProcessor:
     def __init__(self, azure_config_path="azure_config.json"):
         self.azure_config_path = azure_config_path
-        # Add any initialization that depends on the config here
+        try:
+            self.azure_config = self.load_azure_config(azure_config_path).get("azure_ai", {})
+        except Exception:
+            self.azure_config = {}
 
     def load_azure_config(self, path):
         with open(path) as config_file:
             return json.load(config_file)
 
     def create_text_analytics_client(self):
-        endpoint = self.azure_config['endpoint']
-        key = self.azure_config['key']
+        endpoint = self.azure_config.get('endpoint')
+        key = self.azure_config.get('key')
+        if not endpoint or not key:
+            logger.warning("Text Analytics client not configured; missing endpoint/key")
+            return None
+        from azure.ai.textanalytics import TextAnalyticsClient
+        from azure.core.credentials import AzureKeyCredential
         return TextAnalyticsClient(endpoint=endpoint, credential=AzureKeyCredential(key))
 
     def filter_content(self, story):

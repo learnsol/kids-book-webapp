@@ -9,6 +9,8 @@ from .base_agent import BaseAgent
 logger = logging.getLogger('kidsbook')
 
 class IllustratorAgent(BaseAgent):
+    RETRYABLE_ERROR_TOKENS = ("timeout", "connection", "ratelimit", "temporary")
+
     def __init__(self, config_path='azure_config.json'):
         """Initialize the IllustratorAgent with configuration for DALL-E 3."""
         super().__init__(config_path, 'illustrator_agent')
@@ -37,23 +39,42 @@ class IllustratorAgent(BaseAgent):
         Returns:
             str: URL of the generated cover image.
         """
-        try:
-            prompt = self._create_cover_prompt(final_story)
-            
-            response = await self.client.images.generate(
-                model=self.config['deployment_name'],
-                prompt=prompt,
-                n=self.config['generation_params']['n'],
-                size=self.config['image_size'],
-                quality="standard"
-            )
-            
-            logger.info("Cover image generated successfully.")
-            return response.data[0].url
-            
-        except Exception as e:
-            logger.exception(f"Cover image generation failed: {str(e)}")
-            raise
+        prompt = self._create_cover_prompt(final_story)
+        max_retries = int(self.config.get("max_retries", 2))
+        max_attempts = max_retries + 1
+        for attempt in range(max_attempts):
+            try:
+                response = await self.client.images.generate(
+                    model=self.config['deployment_name'],
+                    prompt=prompt,
+                    n=self.config['generation_params']['n'],
+                    size=self.config['image_size'],
+                    quality="standard"
+                )
+
+                logger.info("Cover image generated successfully.")
+                return response.data[0].url
+            except Exception as e:
+                should_retry = attempt < max_attempts - 1 and self._is_retryable_error(e)
+                if not should_retry:
+                    logger.exception(f"Cover image generation failed: {str(e)}")
+                    raise
+                backoff = 2 ** attempt
+                logger.warning(f"Retrying image generation in {backoff}s after error: {str(e)}")
+                await asyncio.sleep(backoff)
+
+    def _is_retryable_error(self, error: Exception) -> bool:
+        status_code = getattr(error, "status_code", None)
+        if status_code in {408, 429}:
+            return True
+        if isinstance(status_code, int) and status_code >= 500:
+            return True
+        error_name = error.__class__.__name__.lower()
+        error_message = str(error).lower()
+        return any(
+            token in error_name or token in error_message
+            for token in self.RETRYABLE_ERROR_TOKENS
+        )
 
     def _create_cover_prompt(self, final_story: str):
         """Create a prompt for the cover image."""
