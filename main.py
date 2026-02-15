@@ -133,8 +133,6 @@ async def create_kids_book(
     except asyncio.TimeoutError:
         logger.error("Operation timed out")
         raise HTTPException(status_code=504, detail="Operation timed out")
-    except HTTPException:
-        raise
     except Exception as e:
         logger.exception(f"Error processing request: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")

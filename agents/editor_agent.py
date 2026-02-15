@@ -73,12 +73,16 @@ class EditorAgent(BaseAgent):
 
     def _is_retryable_error(self, error: Exception) -> bool:
         status_code = getattr(error, "status_code", None)
-        if status_code in {408, 409, 429}:
+        if status_code in {408, 429}:
             return True
         if isinstance(status_code, int) and status_code >= 500:
             return True
-        error_text = f"{error.__class__.__name__} {error}".lower()
-        return any(token in error_text for token in self.RETRYABLE_ERROR_TOKENS)
+        error_name = error.__class__.__name__.lower()
+        error_message = str(error).lower()
+        return any(
+            token in error_name or token in error_message
+            for token in self.RETRYABLE_ERROR_TOKENS
+        )
 
     def _extract_interesting_points(self, story: str):
         """
