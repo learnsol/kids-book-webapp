@@ -69,8 +69,8 @@ class IllustratorAgent(BaseAgent):
             return True
         if isinstance(status_code, int) and status_code >= 500:
             return True
-        error_name = error.__class__.__name__.lower()
-        return any(token in error_name for token in self.RETRYABLE_ERROR_TOKENS)
+        error_text = f"{error.__class__.__name__} {error}".lower()
+        return any(token in error_text for token in self.RETRYABLE_ERROR_TOKENS)
 
     def _create_cover_prompt(self, final_story: str):
         """Create a prompt for the cover image."""

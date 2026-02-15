@@ -1,6 +1,6 @@
-def create_kids_book(*args, **kwargs):
+def create_kids_book(request):
     raise RuntimeError("Django views are not used. Use FastAPI routes in main.py.")
 
 
-def index(*args, **kwargs):
+def index(request):
     raise RuntimeError("Django views are not used. Use FastAPI routes in main.py.")

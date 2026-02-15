@@ -81,6 +81,30 @@ class AgentAndProcessorTests(unittest.TestCase):
         self.assertEqual(result["final_story"], "Edited story text")
         self.assertEqual(agent.client.calls, 2)
 
+    def test_editor_does_not_retry_non_transient_error(self):
+        agent = EditorAgent.__new__(EditorAgent)
+        attempts = {"count": 0}
+
+        class _NonTransientClient:
+            def __init__(self):
+                self.chat = types.SimpleNamespace(completions=self)
+
+            def create(self, **kwargs):
+                attempts["count"] += 1
+                raise ValueError("invalid request")
+
+        agent.client = _NonTransientClient()
+        agent.config = {
+            "deployment_name": "model",
+            "prompt": {"system": "system prompt"},
+            "temperature": 0.7,
+            "max_tokens": 256,
+            "max_retries": 2,
+        }
+        with self.assertRaises(ValueError):
+            agent.edit_story("Once upon a time")
+        self.assertEqual(attempts["count"], 1)
+
     def test_story_processor_generates_html(self):
         with patch.object(StoryProcessor, "load_azure_config", return_value={}):
             processor = StoryProcessor()

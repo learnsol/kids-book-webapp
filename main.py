@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from fastapi import FastAPI, Request, HTTPException, Form, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +14,10 @@ from agents.editor_agent import EditorAgent
 from agents.illustrator_agent import IllustratorAgent
 from agents.story_processor import StoryProcessor
 
+# Set up logging
+logger = logging.getLogger("kidsbook")
+logging.basicConfig(level=logging.DEBUG)
+
 # Load environment variables from .env
 load_dotenv()
 
@@ -24,6 +29,7 @@ MAX_STORY_LENGTH = 5000
 _editor_agent = None
 _illustrator_agent = None
 _story_processor = None
+_agents_lock = threading.Lock()
 
 # Create tables on startup
 @app.on_event("startup")
@@ -45,17 +51,14 @@ def get_db():
 
 def get_agents():
     global _editor_agent, _illustrator_agent, _story_processor
-    if _editor_agent is None:
-        _editor_agent = EditorAgent()
-    if _illustrator_agent is None:
-        _illustrator_agent = IllustratorAgent()
-    if _story_processor is None:
-        _story_processor = StoryProcessor()
+    with _agents_lock:
+        if _editor_agent is None:
+            _editor_agent = EditorAgent()
+        if _illustrator_agent is None:
+            _illustrator_agent = IllustratorAgent()
+        if _story_processor is None:
+            _story_processor = StoryProcessor()
     return _editor_agent, _illustrator_agent, _story_processor
-
-# Set up logging
-logger = logging.getLogger("kidsbook")
-logging.basicConfig(level=logging.DEBUG)
 
 # Mount static files (assuming your static assets are in webapp/static)
 app.mount("/static", StaticFiles(directory="webapp/static"), name="static")
@@ -130,6 +133,8 @@ async def create_kids_book(
     except asyncio.TimeoutError:
         logger.error("Operation timed out")
         raise HTTPException(status_code=504, detail="Operation timed out")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Error processing request: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")

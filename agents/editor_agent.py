@@ -8,6 +8,8 @@ import time
 logger = logging.getLogger('kidsbook')
 
 class EditorAgent(BaseAgent):
+    RETRYABLE_ERROR_TOKENS = ("timeout", "connection", "ratelimit", "temporary")
+
     def __init__(self, config_path='azure_config.json'):
         """
         Initialize the EditorAgent using Azure OpenAI (GPT-4o) and configure the OpenAI SDK.
@@ -61,12 +63,22 @@ class EditorAgent(BaseAgent):
                     "illustrator_prompt": "Create illustrations for: " + edited_story[:200]
                 }
             except Exception as e:
-                if attempt == max_attempts - 1:
+                should_retry = attempt < max_attempts - 1 and self._is_retryable_error(e)
+                if not should_retry:
                     logger.exception(f"Error editing story: {str(e)}")
                     raise
                 backoff = 2 ** attempt
                 logger.warning(f"Retrying story edit in {backoff}s after error: {str(e)}")
                 time.sleep(backoff)
+
+    def _is_retryable_error(self, error: Exception) -> bool:
+        status_code = getattr(error, "status_code", None)
+        if status_code in {408, 409, 429}:
+            return True
+        if isinstance(status_code, int) and status_code >= 500:
+            return True
+        error_text = f"{error.__class__.__name__} {error}".lower()
+        return any(token in error_text for token in self.RETRYABLE_ERROR_TOKENS)
 
     def _extract_interesting_points(self, story: str):
         """
